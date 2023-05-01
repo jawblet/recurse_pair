@@ -9,6 +9,36 @@
 #include <signal.h>
 #include <unistd.h>
 
+/***************************************************************************************
+*	Recurse Center pair programming: Two-way chat program 
+*	-----------------------------------------------------
+*	% Simple two-way chat application using UDP socket programming 
+*	%
+*	% Terminal 1: ./chat <port-1>				
+*	% Terminal 2: ./chat <port-2> <port-1>	
+*	%
+*	% Terminal 1 binds to port-1 and terminal 2 binds to port-2. 
+*	% Anything typed into terminal 2's window will be sent to terminal 1 [100 char max]. 
+*	% On receiving the chat, terminal 1 saves terminal 2's port and it can message terminal 2. 
+*	% Ctrl+C to exit
+*
+*	% Example execution: Run `make` to compile 
+*	$ ./chat 2020 8080
+*	$ >>> hey guy! 
+*	$ >>> [8080]: hey pal
+*	$ >>> [8080]: great to hear from you
+*	$ >>> <3
+*	$ >>> 
+*   
+*	$ ./chat 8080
+*	$ >>> [2020]: hey guy!
+*	$ >>> hey pal 
+*	$ >>> great to hear from you
+*	$ >>> [2020]: <3
+*	$ >>> 
+*
+************************************************************************************** */
+
 pthread_mutex_t mutex; 
 pthread_t thr, thr2, thr3;
 int my_port = 0, peer_port = 0, sckt = -1;
@@ -19,11 +49,13 @@ socklen_t len = sizeof(peer_addr);
 
 char msg[101] = {0}; 
 
+/* print token indicating chat is active */
 void print_newline(){
 	printf(">>> ");
 	fflush(stdout); 
 }
 
+/* receive messages from other node*/
 void *rcv_msg(){
 	char buf[101] = {0};
 
@@ -40,6 +72,7 @@ void *rcv_msg(){
 	}
 }
 
+/* send messages to peer node */
 void *send_msg() {
 	while(running) {
 		if(msg[0] != '\0' && peer_port != 0) {
@@ -53,6 +86,7 @@ void *send_msg() {
 	}
 }
 
+/* get user input */
 void *get_string() {
 	while(running) {
 		print_newline();
@@ -76,10 +110,12 @@ void *get_string() {
 	}
 }
 
+/* print usage message for error handling */
 void print_usage() {
 	printf("Usage: ./chat <port> [peer-port]\n"); 
 }
 
+/* confirm port is in right arrange */
 int check_port(int port){
 	if(port >= 1024 && port <= 65535) {
 		return 1; 
@@ -89,6 +125,7 @@ int check_port(int port){
 	return -1; 
 }
 
+/* handle closing program with Cntrl+C */
 static void sigpipe_handler(int signum) {
 	running = 0; 
 	printf("\n");
@@ -111,6 +148,9 @@ static void sigpipe_handler(int signum) {
 	exit(signum);
 }
 
+/*
+ * initialize program and create threads for getting user input, sending msgs, receiving msgs
+ * */
 int main(int argc, char **argv) {
 	pthread_mutex_init(&mutex, NULL);
 	signal(SIGINT, sigpipe_handler);
